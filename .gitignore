@@ -8,3 +8,5 @@
 __pycache__/
 /testlib/
 
+# 本机部署脚本和笔记只留在本地，不随项目发布
+/scripts/
