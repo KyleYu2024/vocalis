@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"vocalis/internal/feed"
 	"vocalis/internal/store"
 )
 
@@ -136,36 +135,6 @@ func TestBookFeedListsEveryChapter(t *testing.T) {
 	}
 }
 
-// The default library feed keeps every chapter as its own episode so a single
-// subscription can still pick "which episode of this book".
-func TestLibraryFeedChapterMode(t *testing.T) {
-	f := newFixtureCfg(t, Config{LibraryTitle: "测试书架", LibraryFeedMode: feed.LibraryModeChapters})
-	_, body := get(t, f.ts.URL+"/feed/library.xml", nil)
-	xml := string(body)
-	if n := strings.Count(xml, "<item>"); n != 2 {
-		t.Fatalf("chapters 模式应有 2 集，实际 %d", n)
-	}
-	for _, id := range f.chapterID {
-		if !strings.Contains(xml, "/audio/"+id) {
-			t.Errorf("chapters 模式缺少章节 %s", id)
-		}
-	}
-	if !strings.Contains(xml, "<itunes:season>1</itunes:season>") {
-		t.Error("chapters 模式需要用 itunes:season 标出书名分组")
-	}
-	if !strings.Contains(xml, "<itunes:episode>2</itunes:episode>") {
-		t.Error("chapters 模式缺少章节序号")
-	}
-}
-
-func TestLibraryFeedBooksModeUsesMergedStream(t *testing.T) {
-	f := newFixtureCfg(t, Config{LibraryTitle: "测试书架", LibraryFeedMode: feed.LibraryModeBooks})
-	_, body := get(t, f.ts.URL+"/feed/library.xml", nil)
-	if !strings.Contains(string(body), "/stream/"+f.bookID) {
-		t.Fatalf("books 模式应使用合并音频流：\n%s", body)
-	}
-}
-
 // TestMergedStreamRange exercises the byte range logic that podcast clients
 // rely on to seek and to remember the playback position.
 func TestMergedStreamRange(t *testing.T) {
@@ -258,12 +227,13 @@ func TestChaptersJSON(t *testing.T) {
 func TestTokenAuth(t *testing.T) {
 	f := newFixture(t, "s3cret")
 
-	resp, _ := get(t, f.ts.URL+"/feed/library.xml", nil)
+	bookFeedURL := f.ts.URL + "/feed/book/" + f.bookID + ".xml"
+	resp, _ := get(t, bookFeedURL, nil)
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("无 token 应返回 401，实际 %d", resp.StatusCode)
 	}
 
-	resp, body := get(t, f.ts.URL+"/feed/library.xml?token=s3cret", nil)
+	resp, body := get(t, bookFeedURL+"?token=s3cret", nil)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("带 token 应返回 200，实际 %d", resp.StatusCode)
 	}
@@ -303,43 +273,21 @@ func TestUnknownBookIs404(t *testing.T) {
 	}
 }
 
-// TestSubscribeLinkIsWellFormed guards the bug where a missing token left the
-// generated link as "/subscribe&u=..." instead of "/subscribe?u=...".
-func TestSubscribeLinkIsWellFormed(t *testing.T) {
-	f := newFixture(t, "")
-	_, body := get(t, f.ts.URL+"/", nil)
-	page := string(body)
-	if !strings.Contains(page, "/subscribe?u=") {
-		t.Fatalf("首页的订阅链接格式不对：\n%s", excerpt(page, "/subscribe", 120))
-	}
-	if strings.Contains(page, "/subscribe&u=") {
-		t.Fatalf("首页的订阅链接缺少 ? 分隔符")
-	}
-
-	// And with a token the query string must be extended, not restarted.
-	f2 := newFixture(t, "abc123")
-	_, body = get(t, f2.ts.URL+"/?token=abc123", nil)
-	page = string(body)
-	// html/template escapes the & separator as &amp; inside attributes, which
-	// is what a browser expects to receive.
-	if !strings.Contains(page, "/subscribe?token=abc123&amp;u=http") {
-		t.Fatalf("带 token 的订阅链接格式不对：\n%s", excerpt(page, "/subscribe", 140))
-	}
-}
-
-func TestSubscribePageQRCarriesToken(t *testing.T) {
+// 订阅只保留「复制链接」一种方式：卡片上不再有「添加」按钮，订阅引导页和
+// 二维码也一并去掉了。
+func TestIndexOffersCopyLinkOnly(t *testing.T) {
 	f := newFixture(t, "abc123")
-	resp, body := get(t, f.ts.URL+"/subscribe?token=abc123&u=http%3A%2F%2Fexample.com%2Ffeed.xml&t=T", nil)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d", resp.StatusCode)
+	_, body := get(t, f.ts.URL+"/?token=abc123", nil)
+	page := string(body)
+
+	want := `data-copy="` + f.ts.URL + `/feed/book/` + f.bookID + `.xml?token=abc123"`
+	if !strings.Contains(page, want) {
+		t.Fatalf("书架卡片上应该能复制订阅链接：\n%s", excerpt(page, "data-copy", 160))
 	}
-	if !strings.Contains(string(body), "/qr?u=http://example.com/feed.xml&amp;token=abc123") {
-		t.Fatalf("订阅页的二维码地址没有带 token：\n%s", excerpt(string(body), "/qr?", 160))
-	}
-	// The QR image itself must be reachable with the token.
-	resp, qr := get(t, f.ts.URL+"/qr?u=http%3A%2F%2Fexample.com%2Ffeed.xml&token=abc123", nil)
-	if resp.StatusCode != http.StatusOK || !bytes.HasPrefix(qr, []byte{0x89, 'P', 'N', 'G'}) {
-		t.Fatalf("二维码不可用: status=%d", resp.StatusCode)
+	for _, gone := range []string{"/subscribe", "/qr?"} {
+		if strings.Contains(page, gone) {
+			t.Fatalf("订阅方式应只剩复制链接，页面里还有 %s", gone)
+		}
 	}
 }
 
@@ -357,11 +305,12 @@ func TestLoginGeneratesStableToken(t *testing.T) {
 		t.Fatal("生成的 token 为空")
 	}
 
-	resp, _ := get(t, f.ts.URL+"/feed/library.xml", nil)
+	bookFeedURL := f.ts.URL + "/feed/book/" + f.bookID + ".xml"
+	resp, _ := get(t, bookFeedURL, nil)
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("没有凭证应 401，实际 %d", resp.StatusCode)
 	}
-	resp, body := get(t, f.ts.URL+"/feed/library.xml?token="+token, nil)
+	resp, body := get(t, bookFeedURL+"?token="+token, nil)
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("带 token 应 200，实际 %d", resp.StatusCode)
 	}

@@ -24,8 +24,6 @@ services:
       VOCALIS_PASSWORD: ${VOCALIS_PASSWORD:-}
       # 如果你通过反向代理访问，填对外地址，生成的订阅地址才会正确
       VOCALIS_BASE_URL: ${VOCALIS_BASE_URL:-}
-      # 可选：提升 Google Books 刮削配额
-      VOCALIS_GOOGLE_BOOKS_KEY: ${VOCALIS_GOOGLE_BOOKS_KEY:-}
       TZ: ${TZ:-Asia/Shanghai}
     volumes:
       # 左边改成你 NAS 上有声书的真实路径

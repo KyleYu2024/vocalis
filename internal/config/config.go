@@ -12,24 +12,20 @@ import (
 
 // Config holds every runtime setting.
 type Config struct {
-	LibraryDir     string
-	DataDir        string
-	Addr           string
-	BaseURL        string
-	Username       string
-	Password       string
-	Token          string
-	Title          string
-	Language       string
-	Country        string
-	Layout         string
-	ScanInterval   time.Duration
-	LogLevel       string
-	GoogleBooksKey string
+	LibraryDir   string
+	DataDir      string
+	Addr         string
+	BaseURL      string
+	Username     string
+	Password     string
+	Token        string
+	Title        string
+	Language     string
+	Layout       string
+	ScanInterval time.Duration
+	LogLevel     string
 	// BookTitle names the single book when layout=single.
 	BookTitle string
-	// LibraryFeedMode is books|chapters.
-	LibraryFeedMode string
 }
 
 // Load parses command line flags, falling back to VOCALIS_* environment
@@ -46,13 +42,10 @@ func Load(args []string) (Config, error) {
 		token      = fs.String("token", env("VOCALIS_TOKEN", ""), "订阅地址访问令牌，推荐在公网使用时设置")
 		title      = fs.String("title", env("VOCALIS_TITLE", "Vocalis"), "播客标题 / 网页标题")
 		language   = fs.String("language", env("VOCALIS_LANGUAGE", "zh-cn"), "播客语言")
-		country    = fs.String("country", env("VOCALIS_COUNTRY", "cn"), "刮削优先使用的区域")
 		layout     = fs.String("layout", env("VOCALIS_LAYOUT", "auto"), "目录解析模式：auto|flat|nested|single")
 		interval   = fs.String("scan-interval", env("VOCALIS_SCAN_INTERVAL", "0"), "自动重新扫描间隔，如 6h，0 表示关闭")
 		logLevel   = fs.String("log-level", env("VOCALIS_LOG_LEVEL", "info"), "日志级别：debug|info|warn|error")
-		gbKey      = fs.String("google-books-key", env("VOCALIS_GOOGLE_BOOKS_KEY", ""), "可选的 Google Books API Key，用于提高刮削配额")
 		bookTitle  = fs.String("book-title", env("VOCALIS_BOOK_TITLE", ""), "layout=single 时这本书的标题（容器里挂载点名字没意义）")
-		libFeed    = fs.String("library-feed", env("VOCALIS_LIBRARY_FEED", "chapters"), "整库订阅组织方式：chapters（每章一集，书=季）| books（每本书一集）")
 	)
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
@@ -68,22 +61,19 @@ func Load(args []string) (Config, error) {
 		return Config{}, fmt.Errorf("layout 只能是 auto、flat、nested 或 single，收到 %q", *layout)
 	}
 	return Config{
-		LibraryDir:      strings.TrimSpace(*libraryDir),
-		DataDir:         strings.TrimSpace(*dataDir),
-		Addr:            strings.TrimSpace(*addr),
-		BaseURL:         strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
-		Username:        strings.TrimSpace(*username),
-		Password:        *password,
-		Token:           strings.TrimSpace(*token),
-		Title:           strings.TrimSpace(*title),
-		Language:        strings.TrimSpace(*language),
-		Country:         strings.TrimSpace(*country),
-		Layout:          layoutNorm,
-		ScanInterval:    d,
-		LogLevel:        strings.ToLower(strings.TrimSpace(*logLevel)),
-		GoogleBooksKey:  strings.TrimSpace(*gbKey),
-		BookTitle:       strings.TrimSpace(*bookTitle),
-		LibraryFeedMode: strings.ToLower(strings.TrimSpace(*libFeed)),
+		LibraryDir:   strings.TrimSpace(*libraryDir),
+		DataDir:      strings.TrimSpace(*dataDir),
+		Addr:         strings.TrimSpace(*addr),
+		BaseURL:      strings.TrimRight(strings.TrimSpace(*baseURL), "/"),
+		Username:     strings.TrimSpace(*username),
+		Password:     *password,
+		Token:        strings.TrimSpace(*token),
+		Title:        strings.TrimSpace(*title),
+		Language:     strings.TrimSpace(*language),
+		Layout:       layoutNorm,
+		ScanInterval: d,
+		LogLevel:     strings.ToLower(strings.TrimSpace(*logLevel)),
+		BookTitle:    strings.TrimSpace(*bookTitle),
 	}, nil
 }
 

@@ -41,7 +41,8 @@ type Book struct {
 	TotalDuration float64   `json:"totalDuration"`
 	TotalSize     int64     `json:"totalSize"`
 
-	// ScrapeSource records where the online metadata came from.
+	// ScrapeSource/ScrapedAt are legacy fields kept so that override files
+	// written by older versions (when online scraping existed) still load.
 	ScrapeSource string    `json:"scrapeSource,omitempty"`
 	ScrapedAt    time.Time `json:"scrapedAt,omitempty"`
 	AddedAt      time.Time `json:"addedAt"`
@@ -56,8 +57,8 @@ func (b *Book) ChapterCount() int { return len(b.Chapters) }
 // SingleFile reports whether the whole book lives in one audio file.
 func (b *Book) SingleFile() bool { return len(b.Chapters) == 1 }
 
-// Override carries user edits and scraped values that must survive a rescan of
-// the library directory. Only non-empty fields win over scanned values.
+// Override carries user edits that must survive a rescan of the library
+// directory. Only non-empty fields win over scanned values.
 type Override struct {
 	Title       string    `json:"title,omitempty"`
 	Author      string    `json:"author,omitempty"`
@@ -73,8 +74,8 @@ type Override struct {
 	Source      string    `json:"source,omitempty"`
 	ScrapedAt   time.Time `json:"scrapedAt,omitempty"`
 
-	// Locked lists field names the user edited by hand. Scrapers never touch
-	// locked fields.
+	// Locked is a legacy field from the scraping era; it is only read back for
+	// compatibility with older override files.
 	Locked []string `json:"locked,omitempty"`
 }
 

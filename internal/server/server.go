@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"vocalis/internal/feed"
-	"vocalis/internal/scrape"
 	"vocalis/internal/store"
 )
 
@@ -30,22 +29,15 @@ type Config struct {
 	Token        string
 	LibraryTitle string
 	Language     string
-	Country      string
-	// LibraryFeedMode is "chapters" (every chapter is an episode, books become
-	// seasons) or "books" (one episode per book).
-	LibraryFeedMode string
-	// GoogleBooksKey is optional and only raises the scraping quota.
-	GoogleBooksKey string
 }
 
 // Server serves feeds, audio and the web UI.
 type Server struct {
-	cfg    Config
-	store  *store.Store
-	scrape *scrape.Client
-	tmpl   *template.Template
-	mux    *http.ServeMux
-	log    *slog.Logger
+	cfg   Config
+	store *store.Store
+	tmpl  *template.Template
+	mux   *http.ServeMux
+	log   *slog.Logger
 }
 
 // New builds a server for the given store.
@@ -56,33 +48,22 @@ func New(cfg Config, st *store.Store, log *slog.Logger) (*Server, error) {
 	if cfg.Language == "" {
 		cfg.Language = "zh-cn"
 	}
-	if cfg.Country == "" {
-		cfg.Country = "cn"
-	}
 	tmpl, err := template.New("").Funcs(template.FuncMap{
 		"safeURL": func(s string) template.URL { return template.URL(s) },
 		"dur":     humanDuration,
 		"size":    humanSize,
-		"pct":     func(f float64) float64 { return f * 100 },
 		"date":    func(t time.Time) string { return t.Local().Format("2006-01-02 15:04") },
 	}).ParseFS(webFS, "web/*.html")
 	if err != nil {
 		return nil, fmt.Errorf("解析页面模板失败: %w", err)
 	}
 	s := &Server{
-		cfg:    cfg,
-		store:  st,
-		scrape: scrape.New(),
-		tmpl:   tmpl,
-		mux:    http.NewServeMux(),
-		log:    log,
+		cfg:   cfg,
+		store: st,
+		tmpl:  tmpl,
+		mux:   http.NewServeMux(),
+		log:   log,
 	}
-	s.scrape.SetLogger(func(format string, args ...any) {
-		if log != nil {
-			log.Debug(format, args...)
-		}
-	})
-	s.scrape.SetGoogleBooksKey(cfg.GoogleBooksKey)
 	// A login protects the browser UI, but podcast clients cannot answer a
 	// Basic auth prompt reliably. When only a login is configured we mint a
 	// stable token so that feed URLs can still be protected and shared.
@@ -108,20 +89,14 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) routes() {
 	static, _ := fs.Sub(webFS, "web")
-	s.mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.FS(static))))
+	s.mux.Handle("GET /static/", noCache(http.StripPrefix("/static/", http.FileServer(http.FS(static)))))
 
 	s.mux.HandleFunc("GET /{$}", s.handleIndex)
 	s.mux.HandleFunc("GET /book/{id}", s.handleBookPage)
 	s.mux.HandleFunc("POST /book/{id}/save", s.handleBookSave)
-	s.mux.HandleFunc("POST /book/{id}/scrape", s.handleBookScrape)
-	s.mux.HandleFunc("POST /book/{id}/search", s.handleBookSearch)
-	s.mux.HandleFunc("POST /book/{id}/apply", s.handleBookApply)
 	s.mux.HandleFunc("POST /rescan", s.handleRescanPage)
-	s.mux.HandleFunc("GET /subscribe", s.handleSubscribePage)
 	s.mux.HandleFunc("GET /search", s.handleSearchPage)
-	s.mux.HandleFunc("GET /qr", s.handleQRCode)
 
-	s.mux.HandleFunc("GET /feed/library.xml", s.handleLibraryFeed)
 	s.mux.HandleFunc("GET /feed/book/{name}", s.handleBookFeed)
 	s.mux.HandleFunc("GET /chapters/{name}", s.handleChaptersJSON)
 	s.mux.HandleFunc("GET /cover/{id}", s.handleCover)
@@ -138,8 +113,19 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/stats", s.handleAPIStats)
 	s.mux.HandleFunc("GET /api/books", s.handleAPIBooks)
 	s.mux.HandleFunc("POST /api/rescan", s.handleAPIRescan)
-	s.mux.HandleFunc("GET /api/search", s.handleAPISearch)
 	s.mux.HandleFunc("GET /api/find", s.handleAPIFind)
+}
+
+// noCache makes browsers revalidate these responses instead of reusing a
+// cached copy. Pages are dynamic and the embedded static files carry neither
+// Last-Modified nor ETag (they are baked into the binary with a zero mod
+// time), so without this header a browser can keep running an old app.js
+// after an upgrade.
+func noCache(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-cache")
+		next.ServeHTTP(w, r)
+	})
 }
 
 // --------------------------------------------------------------- middleware
@@ -256,6 +242,7 @@ func (s *Server) linker(r *http.Request) *feed.LinkTarget {
 
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
 	if err := s.tmpl.ExecuteTemplate(w, name, data); err != nil && s.log != nil {
 		s.log.Error("渲染模板失败", "template", name, "err", err)
 	}

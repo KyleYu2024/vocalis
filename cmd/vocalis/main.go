@@ -74,16 +74,13 @@ func run() error {
 	}()
 
 	srv, err := server.New(server.Config{
-		Addr:            cfg.Addr,
-		BaseURL:         cfg.BaseURL,
-		Username:        cfg.Username,
-		Password:        cfg.Password,
-		Token:           cfg.Token,
-		LibraryTitle:    cfg.Title,
-		Language:        cfg.Language,
-		Country:         cfg.Country,
-		LibraryFeedMode: cfg.LibraryFeedMode,
-		GoogleBooksKey:  cfg.GoogleBooksKey,
+		Addr:         cfg.Addr,
+		BaseURL:      cfg.BaseURL,
+		Username:     cfg.Username,
+		Password:     cfg.Password,
+		Token:        cfg.Token,
+		LibraryTitle: cfg.Title,
+		Language:     cfg.Language,
 	}, st, logger)
 	if err != nil {
 		return err

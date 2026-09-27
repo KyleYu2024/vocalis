@@ -1,11 +1,9 @@
 package server
 
 import (
-	"context"
 	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,23 +15,9 @@ import (
 	"vocalis/internal/feed"
 	"vocalis/internal/media"
 	"vocalis/internal/model"
-	"vocalis/internal/scrape"
-
-	"github.com/skip2/go-qrcode"
 )
 
 // ---------------------------------------------------------------- podcast
-
-func (s *Server) handleLibraryFeed(w http.ResponseWriter, r *http.Request) {
-	books := s.store.Books()
-	f := feed.LibraryFeed(books, s.linker(r), feed.LibraryOptions{
-		Title:       s.cfg.LibraryTitle,
-		Description: fmt.Sprintf("%s · 共 %d 本有声书", s.cfg.LibraryTitle, len(books)),
-		Language:    s.cfg.Language,
-		Mode:        s.cfg.LibraryFeedMode,
-	})
-	s.writeFeed(w, f)
-}
 
 func (s *Server) handleBookFeed(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimSuffix(r.PathValue("name"), ".xml")
@@ -85,7 +69,7 @@ func (s *Server) handleCover(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if b.CoverURL != "" {
-		if p, mime, err := s.localCover(b, r.Context()); err == nil && p != "" {
+		if p, mime := s.localCover(b); p != "" {
 			w.Header().Set("Content-Type", mime)
 			http.ServeFile(w, r, p)
 			return
@@ -102,12 +86,11 @@ func (s *Server) handleCover(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(png)
 }
 
-// localCover downloads and caches a remote cover image.
-func (s *Server) localCover(b *model.Book, ctx context.Context) (string, string, error) {
+// localCover returns a previously cached copy of a remote cover image, if one
+// exists. Vocalis no longer downloads artwork: metadata and covers are read
+// from local files only, so nothing here touches the network.
+func (s *Server) localCover(b *model.Book) (string, string) {
 	dir := filepath.Join(s.store.DataDir(), "covers")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return "", "", err
-	}
 	sum := sha1.Sum([]byte(b.CoverURL))
 	key := hex.EncodeToString(sum[:])[:8]
 
@@ -115,43 +98,10 @@ func (s *Server) localCover(b *model.Book, ctx context.Context) (string, string,
 	for _, ext := range []string{".jpg", ".png", ".webp", ".gif"} {
 		p := filepath.Join(dir, "remote-"+b.ID+"-"+key+ext)
 		if st, err := os.Stat(p); err == nil && st.Size() > 0 {
-			return p, media.MIMEFor(p), nil
+			return p, media.MIMEFor(p)
 		}
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	data, mime, err := s.scrape.FetchImage(ctx, b.CoverURL)
-	if err != nil {
-		return "", "", err
-	}
-	ext := extForMIME(mime)
-	if ext == "" {
-		return "", "", errors.New("未知的封面格式")
-	}
-	p := filepath.Join(dir, "remote-"+b.ID+"-"+key+ext)
-	tmp := p + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o644); err != nil {
-		return "", "", err
-	}
-	if err := os.Rename(tmp, p); err != nil {
-		return "", "", err
-	}
-	return p, media.MIMEFor(p), nil
-}
-
-func extForMIME(mime string) string {
-	switch {
-	case strings.HasPrefix(mime, "image/jpeg"):
-		return ".jpg"
-	case strings.HasPrefix(mime, "image/png"):
-		return ".png"
-	case strings.HasPrefix(mime, "image/webp"):
-		return ".webp"
-	case strings.HasPrefix(mime, "image/gif"):
-		return ".gif"
-	}
-	return ""
+	return "", ""
 }
 
 // ------------------------------------------------------------------ audio
@@ -216,46 +166,6 @@ func bookModTime(b *model.Book) time.Time {
 	return time.Unix(newest, 0).UTC()
 }
 
-// -------------------------------------------------------------------- qr
-
-func (s *Server) handleSubscribePage(w http.ResponseWriter, r *http.Request) {
-	feedURL := r.URL.Query().Get("u")
-	title := r.URL.Query().Get("t")
-	if feedURL == "" {
-		http.Error(w, "缺少 u 参数", http.StatusBadRequest)
-		return
-	}
-	s.render(w, "subscribe.html", map[string]any{
-		"Title":   firstNonEmpty(title, "订阅"),
-		"FeedURL": feedURL,
-		"AppLink": appLink(feedURL),
-		"QR":      s.linker(r).URL("/qr?u=" + urlQueryEscape(feedURL)),
-	})
-}
-
-// appLink returns the URL scheme that asks iOS to open the Podcasts app and
-// subscribe to the feed.
-func appLink(feedURL string) string {
-	trimmed := strings.TrimPrefix(strings.TrimPrefix(feedURL, "https://"), "http://")
-	return "pcast://" + trimmed
-}
-
-func (s *Server) handleQRCode(w http.ResponseWriter, r *http.Request) {
-	u := r.URL.Query().Get("u")
-	if u == "" {
-		http.Error(w, "缺少 u 参数", http.StatusBadRequest)
-		return
-	}
-	png, err := qrcode.Encode(u, qrcode.Medium, 512)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Cache-Control", "public, max-age=86400")
-	_, _ = w.Write(png)
-}
-
 // -------------------------------------------------------------------- api
 
 func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
@@ -282,10 +192,7 @@ func (s *Server) handleAPIBooks(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, bj)
 	}
-	s.writeJSON(w, http.StatusOK, map[string]any{
-		"libraryFeedUrl": base.URL("/feed/library.xml"),
-		"books":          out,
-	})
+	s.writeJSON(w, http.StatusOK, map[string]any{"books": out})
 }
 
 func (s *Server) handleAPIRescan(w http.ResponseWriter, r *http.Request) {
@@ -313,25 +220,6 @@ func (s *Server) handleRescanPage(w http.ResponseWriter, r *http.Request) {
 	s.redirect(w, r, "/?msg="+urlQueryEscape(fmt.Sprintf("扫描完成，共 %d 本有声书", n)))
 }
 
-func (s *Server) handleAPISearch(w http.ResponseWriter, r *http.Request) {
-	q := scrape.Query{
-		Title:    r.URL.Query().Get("q"),
-		Author:   r.URL.Query().Get("author"),
-		Language: firstNonEmpty(r.URL.Query().Get("lang"), s.cfg.Language),
-		Country:  s.cfg.Country,
-	}
-	if strings.TrimSpace(q.Title) == "" {
-		http.Error(w, "缺少 q 参数", http.StatusBadRequest)
-		return
-	}
-	items, err := s.scrape.Search(r.Context(), q)
-	if err != nil {
-		s.writeJSON(w, http.StatusBadGateway, map[string]any{"ok": false, "error": err.Error()})
-		return
-	}
-	s.writeJSON(w, http.StatusOK, map[string]any{"ok": true, "candidates": items})
-}
-
 // -------------------------------------------------------------------- util
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -340,10 +228,6 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	_ = enc.Encode(v)
-}
-
-func contextWithTimeout(r *http.Request, d time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(r.Context(), d)
 }
 
 func atoiFallback(s string, def int) int {

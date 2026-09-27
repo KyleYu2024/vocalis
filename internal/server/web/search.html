@@ -37,7 +37,7 @@
           <div class="meta">{{if .Author}}{{.Author}}{{else}}未知作者{{end}}</div>
           <div class="meta">{{.Chapters}} 集 · {{.Duration}} · {{.Size}}</div>
           <div class="actions">
-            <button class="btn tiny" data-copy="{{.FeedURL}}">复制订阅</button>
+            <button class="btn tiny" type="button" data-copy="{{.FeedURL}}">复制订阅</button>
             <a class="btn tiny ghost" href="/book/{{.ID}}">详情</a>
           </div>
         </div>
@@ -49,11 +49,11 @@
     {{if .Chapters}}
     <h2 class="sect">匹配的集</h2>
     <table>
-      <thead><tr><th>季/集</th><th>标题</th><th>所属书</th><th>时长</th><th></th></tr></thead>
+      <thead><tr><th>集</th><th>标题</th><th>所属书</th><th>时长</th><th></th></tr></thead>
       <tbody>
       {{range .Chapters}}
         <tr>
-          <td class="num">S{{.Season}}E{{.Episode}}</td>
+          <td class="num">{{.Episode}}</td>
           <td>{{.Title}}<div class="muted small">{{.Path}}</div></td>
           <td><a href="/book/{{.BookID}}">{{.BookTitle}}</a></td>
           <td class="num">{{.Duration}}</td>

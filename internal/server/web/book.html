@@ -30,7 +30,6 @@
         <dt>大小</dt><dd>{{size .Book.TotalSize}}</dd>
         {{if .Book.Year}}<dt>年份</dt><dd>{{.Book.Year}}</dd>{{end}}
         {{if .Book.Publisher}}<dt>出版</dt><dd>{{.Book.Publisher}}</dd>{{end}}
-        {{if .Book.ScrapeSource}}<dt>元数据</dt><dd>{{.Book.ScrapeSource}}</dd>{{end}}
         <dt>目录</dt><dd><code>{{.Book.RelDir}}</code></dd>
       </div>
     </div>
@@ -40,10 +39,11 @@
         <h2>订阅这一本</h2>
         <div class="row">
           <input class="url" readonly value="{{.FeedURL}}" onclick="this.select()">
-          <button class="btn" data-copy="{{.FeedURL}}">复制地址</button>
-          <a class="btn ghost" href="{{.SubscribeURL}}">添加到播客 App</a>
-          <a class="btn ghost" href="{{safeURL .AppLink}}">直接打开播客</a>
+          <button class="btn" type="button" data-copy="{{.FeedURL}}">复制订阅链接</button>
         </div>
+        <p class="muted small" style="margin-top:10px">
+          复制上面的地址，在播客 App 里「通过 URL 添加节目」即可订阅。
+        </p>
         {{if .Mergeable}}
         <p class="muted small" style="margin-top:10px">
           这本书会被当成一集完整的音频播放：<a href="{{.StreamURL}}">整本音频流</a>，
@@ -51,54 +51,6 @@
         </p>
         {{end}}
       </section>
-
-      <section class="card">
-        <h2>刮削信息</h2>
-        <p class="muted small">先用书名和作者去 Google Books / Apple Books 找，找到最接近的一条自动填入。已有手填内容的字段不会被覆盖。</p>
-        <div class="row">
-          <form method="post" action="/book/{{.Book.ID}}/scrape" class="row" style="flex:1">
-            <input class="url" style="flex:2 1 200px" name="q" value="{{.Book.Title}}" placeholder="书名">
-            <input class="url" style="flex:1 1 140px" name="author" value="{{.Book.Author}}" placeholder="作者（可选）">
-            <button class="btn green" type="submit">自动刮削</button>
-          </form>
-        </div>
-        <div class="row" style="margin-top:10px">
-          <form method="post" action="/book/{{.Book.ID}}/search" class="row" style="flex:1">
-            <input class="url" style="flex:2 1 200px" name="q" value="{{.Book.Title}}" placeholder="搜索书名">
-            <input class="url" style="flex:1 1 140px" name="author" value="{{.Book.Author}}" placeholder="作者（可选）">
-            <button class="btn ghost" type="submit">搜索候选</button>
-          </form>
-        </div>
-      </section>
-
-      {{if .Candidates}}
-      <section class="card">
-        <h2>候选结果</h2>
-        {{range .Candidates}}
-        <div class="cand">
-          {{if .CoverURL}}<img src="{{.CoverURL}}" alt="" loading="lazy">{{end}}
-          <div class="info">
-            <div class="name">{{.Title}}</div>
-            <div class="src">{{if .Author}}{{.Author}} · {{end}}{{.Source}} · 匹配度 {{printf "%.0f" (pct .Score)}}%</div>
-            {{if .Description}}<div class="desc">{{.Description}}</div>{{end}}
-          </div>
-          <form method="post" action="/book/{{$.Book.ID}}/apply">
-            <input type="hidden" name="cand_title" value="{{.Title}}">
-            <input type="hidden" name="cand_author" value="{{.Author}}">
-            <input type="hidden" name="cand_narrator" value="{{.Narrator}}">
-            <input type="hidden" name="cand_description" value="{{.Description}}">
-            <input type="hidden" name="cand_publisher" value="{{.Publisher}}">
-            <input type="hidden" name="cand_year" value="{{.Year}}">
-            <input type="hidden" name="cand_language" value="{{.Language}}">
-            <input type="hidden" name="cand_coverUrl" value="{{.CoverURL}}">
-            <input type="hidden" name="cand_genres" value="{{range $i, $g := .Genres}}{{if $i}}, {{end}}{{$g}}{{end}}">
-            <input type="hidden" name="cand_source" value="{{.Source}}">
-            <button class="btn tiny" type="submit">用这条</button>
-          </form>
-        </div>
-        {{end}}
-      </section>
-      {{end}}
 
       <section class="card">
         <h2>手动编辑</h2>
@@ -117,9 +69,7 @@
             <label>语言<input name="language" value="{{.Override.Language}}" placeholder="zh-cn"></label>
           </div>
           <label>分类（逗号分隔）<input name="genres" value="{{.Genres}}"></label>
-          <label>封面图片地址<input name="coverUrl" value="{{.Override.CoverURL}}" placeholder="https://..."></label>
           <label>简介<textarea name="description">{{.Override.Description}}</textarea></label>
-          <label class="check small"><input type="checkbox" name="lock" value="1" checked> 锁定这些字段，刮削时不覆盖</label>
           <div><button class="btn" type="submit">保存</button></div>
         </form>
       </section>
