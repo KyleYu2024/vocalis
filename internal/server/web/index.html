@@ -1,0 +1,94 @@
+{{define "index.html"}}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <h1>📚 {{.Title}}</h1>
+    <p class="muted">把 NAS 上的有声书变成 iPhone 播客 App 里可以续听的节目</p>
+    <p class="crumbs" style="margin-top:8px">当前在「书架」 · <a href="/search">搜索全部章节 →</a></p>
+  </div>
+</header>
+
+<main class="wrap">
+  {{if .Msg}}<div class="flash ok">{{.Msg}}</div>{{end}}
+  {{if .Err}}<div class="flash bad">{{.Err}}</div>{{end}}
+  {{if .Stats.LastError}}<div class="flash bad">上次扫描出错：{{.Stats.LastError}}</div>{{end}}
+
+  <section class="card">
+    <h2>整库订阅（推荐）</h2>
+    <p class="muted small">只添加一次，整个书架就在同一个播客里。每本书是一「季」，点进某一季就能挑任意一集，
+      播完自动接下一集，进度自动记住。</p>
+    <div class="row">
+      <input class="url" readonly value="{{.LibraryFeedURL}}" onclick="this.select()">
+      <button class="btn" data-copy="{{.LibraryFeedURL}}">复制地址</button>
+      <a class="btn ghost" href="{{.SubscribeURL}}">添加到播客 App</a>
+    </div>
+  </section>
+
+  <div class="stats">
+    <span>共 <b>{{.Stats.Books}}</b> 本有声书</span>
+    <span><b>{{.Stats.Chapters}}</b> 个音频文件</span>
+    <span>总时长 <b>{{dur .Stats.TotalDuration}}</b></span>
+    <span>占用 <b>{{size .Stats.TotalBytes}}</b></span>
+    {{if not .Stats.LastScan.IsZero}}<span>上次扫描 {{date .Stats.LastScan}}</span>{{end}}
+    <form method="post" action="/rescan" style="margin-left:auto" data-confirm="重新扫描书架？大书库可能需要一会儿。">
+      <button class="btn ghost tiny" type="submit">重新扫描书库</button>
+    </form>
+  </div>
+
+  {{if .Books}}
+  <form class="searchbar" action="/search" method="get">
+    <input id="q" class="q" type="search" placeholder="搜索书名、作者…（按 / 聚焦，回车搜全部章节）">
+    <button class="btn ghost" type="submit">全书搜索</button>
+    <span id="qinfo" class="muted small"></span>
+  </form>
+  {{end}}
+
+  {{if .Books}}
+  <div class="grid" id="bookgrid">
+    {{range .Books}}
+    <article class="book" data-search="{{.Title}} {{.Author}} {{.Narrator}} {{.RelDir}}">
+      <a class="cover" href="/book/{{.ID}}"><img src="{{.CoverURL}}" alt="{{.Title}}" loading="lazy"></a>
+      <div class="body">
+        <h3><a href="/book/{{.ID}}">{{.Title}}</a></h3>
+        <div class="meta">
+          {{if .Author}}{{.Author}}{{else}}未知作者{{end}}
+          {{if .Narrator}} · 演播 {{.Narrator}}{{end}}
+        </div>
+        <div class="meta">{{.Chapters}} 个音频 · {{.Duration}} · {{.Size}}</div>
+        <div class="actions">
+          <button class="btn tiny" data-copy="{{.FeedURL}}">复制订阅</button>
+          <a class="btn tiny ghost" href="{{.SubscribeURL}}">添加</a>
+          <a class="btn tiny ghost" href="/book/{{.ID}}">详情</a>
+        </div>
+      </div>
+    </article>
+    {{end}}
+  </div>
+  <p id="qempty" class="muted small" style="display:none">没有匹配的书，试试上方的「全书搜索」。</p>
+  {{else}}
+  <section class="card">
+    <h2>还没有扫描到有声书</h2>
+    <p class="muted small">
+      把有声书放进容器里映射的目录 <code>{{.Stats.LibraryDir}}</code>，
+      然后点上面的“重新扫描书库”。<br>
+      支持“每本书一个文件夹”和“单文件一本书”两种摆放方式。
+    </p>
+  </section>
+  {{end}}
+
+  <footer>
+    数据目录 <code>{{.Stats.DataDir}}</code> · 目录解析模式 <code>{{.Stats.Layout}}</code> · Vocalis
+  </footer>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
+{{end}}

@@ -1,0 +1,83 @@
+{{define "search.html"}}<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>搜索 · {{.LibraryTitle}}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <div class="crumbs"><a href="/">← 返回书架</a></div>
+    <h1>搜索</h1>
+    <p class="muted">在 {{.Stats.Books}} 本书 / {{.Stats.Chapters}} 集里找</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <form class="searchbar" action="/search" method="get">
+    <input id="q" class="q" name="q" type="search" value="{{.Query}}" autofocus
+           placeholder="书名、作者、某一集的名字…">
+    <button class="btn" type="submit">搜索</button>
+  </form>
+
+  {{if .Query}}
+    <p class="muted small">「{{.Query}}」找到 <b>{{len .Books}}</b> 本书、<b>{{.ChapterTotal}}</b> 集音频{{if .Truncated}}（只显示前 {{len .Chapters}} 集）{{end}}</p>
+
+    {{if .Books}}
+    <h2 class="sect">匹配的书</h2>
+    <div class="grid" id="bookgrid">
+      {{range .Books}}
+      <article class="book" data-search="{{.Title}} {{.Author}} {{.Narrator}} {{.RelDir}}">
+        <a class="cover" href="/book/{{.ID}}"><img src="{{.CoverURL}}" alt="{{.Title}}" loading="lazy"></a>
+        <div class="body">
+          <h3><a href="/book/{{.ID}}">{{.Title}}</a></h3>
+          <div class="meta">{{if .Author}}{{.Author}}{{else}}未知作者{{end}}</div>
+          <div class="meta">{{.Chapters}} 集 · {{.Duration}} · {{.Size}}</div>
+          <div class="actions">
+            <button class="btn tiny" data-copy="{{.FeedURL}}">复制订阅</button>
+            <a class="btn tiny ghost" href="/book/{{.ID}}">详情</a>
+          </div>
+        </div>
+      </article>
+      {{end}}
+    </div>
+    {{end}}
+
+    {{if .Chapters}}
+    <h2 class="sect">匹配的集</h2>
+    <table>
+      <thead><tr><th>季/集</th><th>标题</th><th>所属书</th><th>时长</th><th></th></tr></thead>
+      <tbody>
+      {{range .Chapters}}
+        <tr>
+          <td class="num">S{{.Season}}E{{.Episode}}</td>
+          <td>{{.Title}}<div class="muted small">{{.Path}}</div></td>
+          <td><a href="/book/{{.BookID}}">{{.BookTitle}}</a></td>
+          <td class="num">{{.Duration}}</td>
+          <td class="num"><a href="{{.AudioURL}}">播放</a></td>
+        </tr>
+      {{end}}
+      </tbody>
+    </table>
+    {{end}}
+
+    {{if and (not .Books) (not .Chapters)}}
+    <section class="card">
+      <h2>没找到「{{.Query}}」</h2>
+      <p class="muted small">试试更短的关键词，或者只输入书名的一部分。</p>
+    </section>
+    {{end}}
+  {{else}}
+    <section class="card">
+      <h2>输入关键词开始搜索</h2>
+      <p class="muted small">比如「上下五千年」「盘古」。搜到的集可以直接点播放，也可以复制所属书的订阅地址。</p>
+    </section>
+  {{end}}
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>
+{{end}}

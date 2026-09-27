@@ -1,0 +1,10 @@
+data/
+dist/
+build/
+.git/
+.github/
+testlib/
+*.log
+.DS_Store
+__pycache__/
+

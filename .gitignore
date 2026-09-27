@@ -1,0 +1,10 @@
+/data/
+/dist/
+/build/
+/.idea/
+/.vscode/
+*.log
+.DS_Store
+__pycache__/
+/testlib/
+

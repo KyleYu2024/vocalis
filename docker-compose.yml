@@ -1,0 +1,35 @@
+services:
+  vocalis:
+    build: .
+    image: vocalis:latest
+    container_name: vocalis
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 有声书目录（容器内路径，和下面的 volumes 对应）
+      VOCALIS_LIBRARY_DIR: /audiobooks
+      VOCALIS_DATA_DIR: /data
+      # 播客 App 里显示的标题
+      VOCALIS_TITLE: ${VOCALIS_TITLE:-我的有声书}
+      # 目录解析规则：auto（默认）/ flat / nested
+      VOCALIS_LAYOUT: ${VOCALIS_LAYOUT:-auto}
+      # 每隔多久自动重新扫描一次书库，0 表示关闭
+      VOCALIS_SCAN_INTERVAL: ${VOCALIS_SCAN_INTERVAL:-6h}
+      # 访问令牌：设置后，订阅地址需要带 ?token=...，公网暴露时务必设置
+      VOCALIS_TOKEN: ${VOCALIS_TOKEN:-}
+      # 可选：浏览器界面登录账号。只设账号密码时会自动生成一个访问令牌，
+      # 令牌写在 data/token.txt，订阅地址里会自动带上它。
+      VOCALIS_USERNAME: ${VOCALIS_USERNAME:-}
+      VOCALIS_PASSWORD: ${VOCALIS_PASSWORD:-}
+      # 如果你通过反向代理访问，填对外地址，生成的订阅地址才会正确
+      VOCALIS_BASE_URL: ${VOCALIS_BASE_URL:-}
+      # 可选：提升 Google Books 刮削配额
+      VOCALIS_GOOGLE_BOOKS_KEY: ${VOCALIS_GOOGLE_BOOKS_KEY:-}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      # 左边改成你 NAS 上有声书的真实路径
+      - ${LIBRARY_PATH:-/volume1/audiobooks}:/audiobooks:ro
+      - ./data:/data
+    # NAS 上如果遇到权限问题，可以指定以哪个用户运行：
+    # user: "1026:100"
