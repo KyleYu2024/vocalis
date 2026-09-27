@@ -28,8 +28,8 @@ a:hover { text-decoration: underline; }
 
 .topbar {
   background: linear-gradient(180deg, #141a22, #0e1116);
-  padding: 26px 0 22px;
-  margin-bottom: 24px;
+  padding: 22px 0 16px;
+  margin-bottom: 12px;
 }
 .topbar h1 { margin: 0 0 6px; font-size: 22px; }
 .topbar .muted { margin: 0; }
@@ -89,16 +89,6 @@ input.url {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 18px;
-}
-
-/* 手机：默认的 auto-fill 在窄屏会退回单列，这里固定成一行两列 */
-@media (max-width: 640px) {
-  .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
-  .book .body { padding: 10px 10px 12px; gap: 4px; }
-  .book h3 { font-size: 13.5px; }
-  .book .meta { font-size: 11px; }
-  .book .actions { gap: 6px; padding-top: 6px; }
-  .book .actions .btn.tiny { padding: 5px 8px; font-size: 11px; border-radius: 7px; }
 }
 
 .searchbar { display: flex; gap: 10px; align-items: center; margin: 0 0 18px; flex-wrap: wrap; }
@@ -181,3 +171,28 @@ form.stack .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 footer { color: var(--muted); font-size: 12px; padding: 30px 0 50px; }
 
 code { background: var(--panel-2); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+
+/* ------------------------------------------------------------------ 手机
+   这一段必须放在所有基础规则之后：同优先级下后面的规则才生效。 */
+@media (max-width: 640px) {
+  /* 书架：默认的 auto-fill 在窄屏会退回单列，这里固定成一行两列 */
+  .grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .book .body { padding: 10px 10px 12px; gap: 4px; }
+  .book h3 { font-size: 13.5px; }
+  .book .meta { font-size: 11px; }
+  .book .actions { gap: 6px; padding-top: 6px; }
+  .book .actions .btn.tiny { padding: 5px 8px; font-size: 11px; border-radius: 7px; }
+
+  /* 搜索框和按钮保持在同一行 */
+  .searchbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .searchbar input.q { width: 100%; min-width: 0; padding: 10px 12px; font-size: 13.5px; }
+  .searchbar .btn { padding: 10px 12px; font-size: 13px; white-space: nowrap; }
+  /* 过滤计数放到下一行，不挤搜索框 */
+  .searchbar #qinfo { grid-column: 1 / -1; }
+}
