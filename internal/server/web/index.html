@@ -12,7 +12,6 @@
   <div class="wrap topbar-inner">
     <div class="topbar-text">
       <h1>📚 {{.Title}}</h1>
-      <p class="muted">把 NAS 上的有声书变成 iPhone 播客 App 里可以续听的节目</p>
     </div>
     <form method="post" action="/rescan" class="topbar-action"
           data-confirm="重新扫描书架？大书库可能需要一会儿。">
@@ -26,14 +25,6 @@
   {{if .Err}}<div class="flash bad">{{.Err}}</div>{{end}}
   {{if .Stats.LastError}}<div class="flash bad">上次扫描出错：{{.Stats.LastError}}</div>{{end}}
 
-  <div class="stats">
-    <span>共 <b>{{.Stats.Books}}</b> 本有声书</span>
-    <span><b>{{.Stats.Chapters}}</b> 个音频文件</span>
-    <span>总时长 <b>{{dur .Stats.TotalDuration}}</b></span>
-    <span>占用 <b>{{size .Stats.TotalBytes}}</b></span>
-    {{if not .Stats.LastScan.IsZero}}<span>上次扫描 {{date .Stats.LastScan}}</span>{{end}}
-  </div>
-
   {{if .Books}}
   <form class="searchbar" action="/search" method="get">
     <input id="q" class="q" type="search" placeholder="搜索书名、作者…（按 / 聚焦，回车搜全部章节）">
@@ -41,6 +32,14 @@
     <span id="qinfo" class="muted small"></span>
   </form>
   {{end}}
+
+  <div class="stats">
+    <span>共 <b>{{.Stats.Books}}</b> 本有声书</span>
+    <span><b>{{.Stats.Chapters}}</b> 个音频文件</span>
+    <span>总时长 <b>{{dur .Stats.TotalDuration}}</b></span>
+    <span>占用 <b>{{size .Stats.TotalBytes}}</b></span>
+    {{if not .Stats.LastScan.IsZero}}<span>上次扫描 {{date .Stats.LastScan}}</span>{{end}}
+  </div>
 
   {{if .Books}}
   <div class="grid" id="bookgrid">

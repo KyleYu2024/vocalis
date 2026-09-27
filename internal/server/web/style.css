@@ -27,7 +27,6 @@ a:hover { text-decoration: underline; }
 .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
 
 .topbar {
-  border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, #141a22, #0e1116);
   padding: 26px 0 22px;
   margin-bottom: 24px;
