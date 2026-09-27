@@ -41,12 +41,8 @@ type Book struct {
 	TotalDuration float64   `json:"totalDuration"`
 	TotalSize     int64     `json:"totalSize"`
 
-	// ScrapeSource/ScrapedAt are legacy fields kept so that override files
-	// written by older versions (when online scraping existed) still load.
-	ScrapeSource string    `json:"scrapeSource,omitempty"`
-	ScrapedAt    time.Time `json:"scrapedAt,omitempty"`
-	AddedAt      time.Time `json:"addedAt"`
-	UpdatedAt    time.Time `json:"updatedAt"`
+	AddedAt   time.Time `json:"addedAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 	// Fingerprint changes whenever the file layout changes, used to skip rescans.
 	Fingerprint string `json:"fingerprint"`
 }
@@ -60,35 +56,17 @@ func (b *Book) SingleFile() bool { return len(b.Chapters) == 1 }
 // Override carries user edits that must survive a rescan of the library
 // directory. Only non-empty fields win over scanned values.
 type Override struct {
-	Title       string    `json:"title,omitempty"`
-	Author      string    `json:"author,omitempty"`
-	Narrator    string    `json:"narrator,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Publisher   string    `json:"publisher,omitempty"`
-	Year        string    `json:"year,omitempty"`
-	Language    string    `json:"language,omitempty"`
-	Series      string    `json:"series,omitempty"`
-	SeriesIndex int       `json:"seriesIndex,omitempty"`
-	Genres      []string  `json:"genres,omitempty"`
-	CoverURL    string    `json:"coverUrl,omitempty"`
-	Source      string    `json:"source,omitempty"`
-	ScrapedAt   time.Time `json:"scrapedAt,omitempty"`
-
-	// Locked is a legacy field from the scraping era; it is only read back for
-	// compatibility with older override files.
-	Locked []string `json:"locked,omitempty"`
-}
-
-// LockedSet returns the locked fields as a set.
-func (o *Override) LockedSet() map[string]bool {
-	if o == nil {
-		return nil
-	}
-	m := make(map[string]bool, len(o.Locked))
-	for _, f := range o.Locked {
-		m[f] = true
-	}
-	return m
+	Title       string   `json:"title,omitempty"`
+	Author      string   `json:"author,omitempty"`
+	Narrator    string   `json:"narrator,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Publisher   string   `json:"publisher,omitempty"`
+	Year        string   `json:"year,omitempty"`
+	Language    string   `json:"language,omitempty"`
+	Series      string   `json:"series,omitempty"`
+	SeriesIndex int      `json:"seriesIndex,omitempty"`
+	Genres      []string `json:"genres,omitempty"`
+	CoverURL    string   `json:"coverUrl,omitempty"`
 }
 
 // Apply merges the override into a book.
@@ -128,11 +106,5 @@ func (o *Override) Apply(b *Book) {
 	}
 	if o.CoverURL != "" {
 		b.CoverURL = o.CoverURL
-	}
-	if o.Source != "" {
-		b.ScrapeSource = o.Source
-	}
-	if !o.ScrapedAt.IsZero() {
-		b.ScrapedAt = o.ScrapedAt
 	}
 }

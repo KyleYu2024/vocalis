@@ -133,10 +133,6 @@ Vocalis **只读本地信息，不做任何联网查询**：
 * 目录里可选的 `.vocalis.json`（或 `book.json` / `metadata.json`），优先级最高
 * 详情页的「手动编辑」：改完存在 `/data/overrides/<book-id>.json`，重新扫描书库也不会丢
 
-> 早期版本带在线刮削（Google Books / Apple Books），**已经移除**：不再联网、
-> 不需要代理，也不需要任何 API Key。已有刮削结果的字段会继续生效（它们是本地
-> 覆盖文件），但不会再更新；封面只从本地文件或之前下载过的缓存里取。
-
 ### 完全手动指定元数据（可选）
 
 在书目录里放一个 `.vocalis.json`（或 `book.json` / `metadata.json`），

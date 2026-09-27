@@ -72,13 +72,12 @@ func TestOverrideSurvivesRescanAndCanBeCleared(t *testing.T) {
 	}
 }
 
-func TestScrapedFieldsAreNotBakedIntoTheIndex(t *testing.T) {
+func TestOverrideFieldsAreNotBakedIntoTheIndex(t *testing.T) {
 	st, dataDir := newTestStore(t)
 	id := st.Books()[0].ID
 	if err := st.SetOverride(id, &model.Override{
-		Title:    "刮削书名",
+		Title:    "自定义书名",
 		CoverURL: "https://example.com/c.jpg",
-		Source:   "itunes-ebook",
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +86,7 @@ func TestScrapedFieldsAreNotBakedIntoTheIndex(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := string(raw); strings.Contains(got, "刮削书名") {
-		t.Fatalf("library.json 里不应该写入手动/刮削后的值:\n%s", got)
+	if got := string(raw); strings.Contains(got, "自定义书名") {
+		t.Fatalf("library.json 里不应该写入手动编辑后的值:\n%s", got)
 	}
 }
